@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Confirmación Isabella</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: url("fondo.jpg") no-repeat center center fixed;
+  background-size: cover;
+  text-align: center;
+}
+
+.invitacion-container {
+  padding-top: 40px;
+}
+
+.invitacion {
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0px 10px 30px rgba(0,0,0,0.4);
+  border-radius: 15px;
+}
+
+.btn-confirmar {
+  margin-top: 20px;
+  padding: 12px 25px;
+  font-size: 16px;
+  border: none;
+  border-radius: 30px;
+  background-color: #1e3c72;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn-confirmar:hover {
+  background-color: #16305c;
+}
+
+.formulario {
+  margin: 30px auto;
+  width: 90%;
+  max-width: 500px;
+  background: rgba(255,255,255,0.95);
+  padding: 20px;
+  border-radius: 15px;
+  display: none;
+  animation: aparecer 0.5s ease-in-out;
+}
+
+@keyframes aparecer {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.radio-group {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  margin: 10px 0;
+}
+
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-enviar {
+  background-color: #1e3c72;
+  color: white;
+  padding: 10px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="invitacion-container">
+  <img src="invitacion.png" class="invitacion">
+  <br>
+  <button class="btn-confirmar" onclick="mostrarFormulario()">
+    Confirmar asistencia
+  </button>
+</div>
+
+<div class="formulario" id="formulario">
+
+  <input type="text" id="nombre" placeholder="Nombre (quien confirma)">
+
+  <label>¿Confirmas tu asistencia?</label>
+  <div class="radio-group">
+    <label><input type="radio" name="asistencia" value="Si"> Sí</label>
+    <label><input type="radio" name="asistencia" value="No"> No</label>
+  </div>
+
+  <div id="seccionHotel" style="display:none;">
+
+    <label>¿Te hospedarás en el hotel esa noche?</label>
+    <div class="radio-group">
+      <label><input type="radio" name="hotel" value="Si"> Sí</label>
+      <label><input type="radio" name="hotel" value="No"> No</label>
+    </div>
+
+  </div>
+
+  <div id="datosHotel" style="display:none;">
+
+    <input type="text" id="nombreCompleto" placeholder="Nombre completo">
+
+    <select id="tipoDocumento">
+      <option value="">Tipo de identificación</option>
+      <option value="CC">Cédula</option>
+      <option value="TI">Tarjeta de identidad</option>
+      <option value="CE">Cédula extranjera</option>
+      <option value="Pasaporte">Pasaporte</option>
+    </select>
+
+    <input type="text" id="numeroDocumento" placeholder="Número de identificación">
+
+  </div>
+
+  <button class="btn-enviar" onclick="guardar()">Enviar</button>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs, doc, setDoc } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBdhtvLDADu39RpttmJ3I51Jl3KylXF8jw",
+  authDomain: "quince-isabella.firebaseapp.com",
+  projectId: "quince-isabella",
+  storageBucket: "quince-isabella.firebasestorage.app",
+  messagingSenderId: "11950799494",
+  appId: "1:11950799494:web:3dd2d642aeb0fd65326f07"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.mostrarFormulario = function() {
+  document.getElementById("formulario").style.display = "block";
+}
+
+// Mostrar hotel si asistencia = Sí
+document.querySelectorAll('input[name="asistencia"]').forEach(radio => {
+  radio.addEventListener("change", function() {
+    if (this.value === "Si") {
+      document.getElementById("seccionHotel").style.display = "block";
+    } else {
+      document.getElementById("seccionHotel").style.display = "none";
+      document.getElementById("datosHotel").style.display = "none";
+    }
+  });
+});
+
+// Mostrar datos hotel si hotel = Sí
+document.querySelectorAll('input[name="hotel"]').forEach(radio => {
+  radio.addEventListener("change", function() {
+    if (this.value === "Si") {
+      document.getElementById("datosHotel").style.display = "block";
+    } else {
+      document.getElementById("datosHotel").style.display = "none";
+    }
+  });
+});
+
+window.guardar = async function () {
+
+  const nombre = document.getElementById("nombre").value.trim();
+  const asistencia = document.querySelector('input[name="asistencia"]:checked')?.value;
+  const hotel = document.querySelector('input[name="hotel"]:checked')?.value || "No";
+
+  if (!nombre || !asistencia) {
+    alert("Por favor completa los campos obligatorios");
+    return;
+  }
+
+  let nombreCompleto = "";
+  let tipoDocumento = "";
+  let numeroDocumento = "";
+
+  if (asistencia === "Si" && hotel === "Si") {
+
+    nombreCompleto = document.getElementById("nombreCompleto").value.trim();
+    tipoDocumento = document.getElementById("tipoDocumento").value;
+    numeroDocumento = document.getElementById("numeroDocumento").value.trim();
+
+    if (!nombreCompleto || !tipoDocumento || !numeroDocumento) {
+      alert("Completa los datos del hotel");
+      return;
+    }
+  }
+
+  const snapshot = await getDocs(collection(db, "confirmaciones"));
+  const numero = snapshot.size + 1;
+  const numeroFormateado = String(numero).padStart(3, "0");
+
+  const nombreLimpio = nombre.replace(/\s+/g, "-");
+  const idPersonalizado = `${numeroFormateado}-${nombreLimpio}`;
+
+  await setDoc(doc(db, "confirmaciones", idPersonalizado), {
+    numero,
+    fecha: new Date().toISOString(),
+    nombre,
+    nombreCompleto,
+    asistencia,
+    hotel,
+    tipoDocumento,
+    numeroDocumento
+  });
+
+  alert("Confirmación enviada 💙");
+  location.reload();
+};
+</script>
+
+</body>
+</html>
